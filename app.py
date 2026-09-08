@@ -7,14 +7,14 @@ import db
 import reminders
 from extraction import extract_action_items
 
-st.set_page_config(page_title="AI Meeting & Follow-Up Agent", page_icon="✅", layout="wide")
+st.set_page_config(page_title="AI Meeting & Follow-Up Agent", page_icon="🤖", layout="wide")
 
 if os.environ.get("GROQ_API_KEY") is None:
     try:
         if "GROQ_API_KEY" in st.secrets:
             os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
     except st.errors.StreamlitSecretNotFoundError:
-        pass  # no secrets.toml at all — fine locally if GROQ_API_KEY is a real env var instead
+        pass  # no secrets.toml at all - fine locally if GROQ_API_KEY is a real env var instead
 
 db.init_db()
 
@@ -23,7 +23,7 @@ if "sweep_done" not in st.session_state:
     sent = reminders.run_reminder_sweep()
     st.session_state.sweep_messages = sent
 
-st.title("✅ AI Meeting & Follow-Up Agent")
+st.title("🤖 AI Meeting & Follow-Up Agent")
 st.caption(
     "Paste a meeting transcript. The agent extracts decisions and action items, assigns "
     "owners and deadlines, and autonomously follows up until each item is marked done."
@@ -32,18 +32,18 @@ st.caption(
 if st.session_state.get("sweep_messages"):
     with st.expander(f"🔔 {len(st.session_state.sweep_messages)} automatic reminder(s) just sent", expanded=True):
         for msg in st.session_state.sweep_messages:
-            st.write("• " + msg)
+            st.write("  " + msg)
 
-tab_new, tab_dashboard, tab_log = st.tabs(["📝 New Meeting", "📋 Dashboard", "🔔 Reminder Log"])
+tab_new, tab_dashboard, tab_log = st.tabs(["📝 New Meeting", "📊 Dashboard", "🔔 Reminder Log"])
 
 with tab_new:
     st.subheader("Process a meeting transcript")
-    title = st.text_input("Meeting title", placeholder="e.g. Weekly Product Sync — Jul 25")
+    title = st.text_input("Meeting title", placeholder="e.g. Weekly Product Sync - Jul 25")
     transcript = st.text_area(
         "Transcript",
         height=280,
         placeholder=(
-            "Paste the raw meeting transcript here — speaker names and rough dialogue is fine, "
+            "Paste the raw meeting transcript here - speaker names and rough dialogue is fine, "
             "the agent will figure out the decisions and action items on its own."
         ),
     )
@@ -61,7 +61,7 @@ with tab_new:
                     items = None
 
             if items is not None:
-                meeting_title = title.strip() or f"Meeting — {datetime.now():%Y-%m-%d %H:%M}"
+                meeting_title = title.strip() or f"Meeting - {datetime.now():%Y-%m-%d %H:%M}"
                 meeting_id = db.create_meeting(meeting_title, transcript)
                 for it in items:
                     db.create_action_item(
@@ -78,7 +78,7 @@ with tab_new:
                             {
                                 "Task": it.get("task", ""),
                                 "Owner": it.get("owner") or "Unassigned",
-                                "Deadline": it.get("deadline") or "—",
+                                "Deadline": it.get("deadline") or "-",
                             }
                             for it in items
                         ]
@@ -94,18 +94,18 @@ with tab_dashboard:
             top = st.columns([5, 2, 2, 2])
             top[0].markdown(f"**{item['task']}**")
             top[1].markdown(f"👤 {item['owner']}")
-            top[2].markdown(f"📅 {item['deadline'] or '—'}")
+            top[2].markdown(f"📅 {item['deadline'] or '-'}")
             top[3].markdown(f"_{item['meeting_title']}_")
             if item["decision"]:
                 st.caption(f"Decision: {item['decision']}")
 
             actions = st.columns([1, 1, 3])
             if completed:
-                if actions[0].button("↩️ Reopen", key=f"reopen-{item['id']}"):
+                if actions[0].button("🔄 Reopen", key=f"reopen-{item['id']}"):
                     db.reopen_item(item["id"])
                     st.rerun()
             else:
-                if actions[0].button("✔️ Mark complete", key=f"complete-{item['id']}"):
+                if actions[0].button("✅ Mark complete", key=f"complete-{item['id']}"):
                     db.mark_complete(item["id"])
                     st.rerun()
                 if actions[1].button("🔔 Send reminder now", key=f"remind-{item['id']}"):
@@ -116,18 +116,18 @@ with tab_dashboard:
             if item_reminders:
                 with st.expander(f"Follow-up history ({len(item_reminders)})"):
                     for r in item_reminders:
-                        st.caption(f"{r['sent_at'][:16].replace('T', ' ')} — {r['message']}")
+                        st.caption(f"{r['sent_at'][:16].replace('T', ' ')} - {r['message']}")
 
     with col1:
-        st.subheader("🟡 Pending")
+        st.subheader("⏳ Pending")
         pending = db.list_action_items(status="pending")
         if not pending:
-            st.info("No pending action items yet — process a meeting to create some.")
+            st.info("No pending action items yet - process a meeting to create some.")
         for item in pending:
             render_item(item, completed=False)
 
     with col2:
-        st.subheader("🟢 Completed")
+        st.subheader("✅ Completed")
         completed = db.list_action_items(status="completed")
         if not completed:
             st.info("Nothing completed yet.")
@@ -138,7 +138,7 @@ with tab_log:
     st.subheader("Automated follow-up activity")
     st.caption(
         "Every reminder below was triggered automatically based on real deadline logic "
-        "(or manually via 'Send reminder now') — this is a simulated send (no real email/SMS "
+        "(or manually via 'Send reminder now') - this is a simulated send (no real email/SMS "
         "wired up), logged exactly like a real notification would be."
     )
     log = db.all_reminders()

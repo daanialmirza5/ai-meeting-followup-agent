@@ -1,3 +1,4 @@
 streamlit>=1.38
 openai>=1.40
 python-dateutil>=2.9
+pytest>=8.0.0

@@ -1,6 +1,6 @@
 """Unit test suite for AI Meeting Follow-Up Agent.
 Compatible with standard library unittest and pytest.
-Tests database persistence, reminder scheduling/sweeps, and extraction logic.
+Tests database persistence, reminder scheduling/sweeps, extraction logic, and RFC 5545 calendar export.
 """
 import os
 import shutil
@@ -11,6 +11,7 @@ from pathlib import Path
 
 import db
 import reminders
+from calendar_export import generate_ics_calendar, _clean_ics_text
 
 
 class TestMeetingFollowUpAgent(unittest.TestCase):
@@ -133,6 +134,48 @@ class TestMeetingFollowUpAgent(unittest.TestCase):
         item_history = db.reminders_for_item(item_id)
         self.assertEqual(len(item_history), 1)
         self.assertIn("Patch regex validator", item_history[0]["message"])
+
+    def test_ics_calendar_generation(self):
+        """Verify standard RFC 5545 iCalendar payload format and attributes."""
+        items = [
+            {
+                "id": 101,
+                "task": "Deploy staging cluster",
+                "owner": "Daanial Mirza",
+                "decision": "Migrate from manual VMs to Kubernetes",
+                "meeting_title": "Infra Sync",
+                "deadline": "2026-11-20 14:00:00",
+                "status": "pending",
+            },
+            {
+                "id": 102,
+                "task": "Review security audit report; approve findings",
+                "owner": "Sarah",
+                "decision": "Quarterly compliance review",
+                "meeting_title": "Security Sync",
+                "deadline": None,
+                "status": "completed",
+            }
+        ]
+
+        ics = generate_ics_calendar(items, calendar_name="Q4 Deliverables")
+        self.assertIn("BEGIN:VCALENDAR", ics)
+        self.assertIn("VERSION:2.0", ics)
+        self.assertIn("PRODID:-//AI Meeting Follow-Up Agent//EN", ics)
+        self.assertIn("X-WR-CALNAME:Q4 Deliverables", ics)
+        self.assertIn("BEGIN:VEVENT", ics)
+        self.assertIn("UID:task-101@aimeetingagent", ics)
+        self.assertIn("SUMMARY:[Daanial Mirza] Deploy staging cluster", ics)
+        self.assertIn("DESCRIPTION:Owner: Daanial Mirza\\nMeeting: Infra Sync\\nContext: Migrate from manual VMs to Kubernetes", ics)
+        self.assertIn("STATUS:CONFIRMED", ics)
+        self.assertIn("STATUS:COMPLETED", ics)
+        self.assertIn("END:VCALENDAR", ics)
+
+    def test_clean_ics_text_escaping(self):
+        """Verify special character escaping (commas, semicolons, backslashes, newlines)."""
+        raw = "Item 1, with semicolon; and newline\nnext line"
+        cleaned = _clean_ics_text(raw)
+        self.assertEqual(cleaned, "Item 1\\, with semicolon\\; and newline\\nnext line")
 
 
 if __name__ == "__main__":

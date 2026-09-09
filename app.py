@@ -6,6 +6,7 @@ import streamlit as st
 import db
 import reminders
 from extraction import extract_action_items
+from calendar_export import generate_ics_calendar
 
 st.set_page_config(page_title="AI Meeting & Follow-Up Agent", page_icon="🤖", layout="wide")
 
@@ -87,6 +88,17 @@ with tab_new:
                     st.info("No clear decisions or action items were found in this transcript.")
 
 with tab_dashboard:
+    all_items = db.list_action_items()
+    if all_items:
+        ics_payload = generate_ics_calendar(all_items)
+        st.download_button(
+            label="📅 Export All Tasks to iCalendar (.ics)",
+            data=ics_payload,
+            file_name="meeting_action_items.ics",
+            mime="text/calendar",
+            help="Import directly into Google Calendar, Apple Calendar, Outlook, or Thunderbird.",
+        )
+
     col1, col2 = st.columns(2)
 
     def render_item(item, completed: bool):
